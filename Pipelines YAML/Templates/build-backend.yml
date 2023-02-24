@@ -1,0 +1,53 @@
+parameters:
+  - name: solution
+    type: string
+  - name: path
+    type: string
+
+steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core sdk'
+    inputs:
+      packageType: 'sdk'
+      version: '6.0.x'
+      includePreviewVersions: true
+
+  - task: DotNetCoreCLI@2
+    displayName: Restore
+    inputs:
+      command: restore
+      projects: '**/*.sln'
+      # selectOrConfig: config
+      # verbosityRestore: Minimal
+      # nugetConfigPath: $(Build.SourcesDirectory)\Nuget.Config
+
+  - task: DotNetCoreCLI@2
+    displayName: Build EnergieServices
+    inputs:
+      projects: ${{ parameters.solution }}
+      arguments: "--configuration Release --no-restore"   
+
+  - task: CopyFiles@2
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: Copy deployment template files to artifacts
+    inputs:
+      SourceFolder: ${{ parameters.path }}
+      Contents: "**/*"
+      TargetFolder: $(Build.ArtifactStagingDirectory)/${{ parameters.path }}/Templates
+
+  - task: DotNetCoreCLI@2
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: Publish
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: ${{ parameters.solution }}
+      arguments: "--configuration Release --output $(build.artifactstagingdirectory)/${{ parameters.path }}"
+      zipAfterPublish: True
+
+  - task: PublishBuildArtifacts@1
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    displayName: "Publish Artifact"
+    inputs:
+      PathtoPublish: "$(build.artifactstagingdirectory)/${{ parameters.path }}"
+      ArtifactName: drop

@@ -1,0 +1,43 @@
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - "./Backend/Service/*"
+
+pool:
+  vmImage: "windows-latest"
+
+variables:
+  - group: GlobalSettings
+  - name: buildConfiguration
+    value: Release
+    
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        steps:
+          - template: Templates/build-backend.yml
+            parameters:
+              solution: Backend/Service/.Api/*.csproj
+              path: Backend/Service/.AzureDeployment
+          - template: Templates/validate-resourcegroupdeployment.yml
+            parameters:
+              resourcegroup: App
+              path: Backend/Service/.AzureDeployment
+              template: azuredeploy.bicep
+              templateParameters: azuredeploy.parameters.json
+              serviceConnection: -Service-Connection
+
+
+  - stage: Deploy
+    displayName: Deploy
+    dependsOn: Build
+    jobs:
+      - template: Templates/deploy-service.yml
+        parameters:
+          serviceConnection: Service-Connection
+          subscriptionId: $(subscriptionid)

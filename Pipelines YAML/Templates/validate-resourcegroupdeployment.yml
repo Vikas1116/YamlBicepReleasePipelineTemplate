@@ -1,0 +1,22 @@
+parameters:
+- name: resourcegroup
+  type: string
+- name: path
+  type: string  
+- name: template
+  type: string
+- name: templateParameters
+  type: string
+- name: serviceConnection
+  type: string
+
+steps:
+- task:  AzureCLI@2
+  displayName: Validate ${{ parameters.template }}  Templates
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    ScriptType: 'ps'
+    scriptLocation: 'inlineScript'
+    FailOnStandardError: false
+    InlineScript: |
+      az deployment group validate -g ${{parameters.resourcegroup}} --template-file ${{parameters.path}}/${{parameters.template}} --parameter ${{parameters.path}}/${{parameters.templateParameters}}

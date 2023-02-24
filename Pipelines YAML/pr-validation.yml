@@ -1,0 +1,21 @@
+trigger: none
+
+pool:
+  vmImage: "windows-latest"
+
+variables:
+  - name: buildConfiguration
+    value: Release
+
+steps:
+  - template: Templates/build-backend.yml
+    parameters:
+      solution: Backend/Service/.Api/*.csproj
+      path: Backend/Service/.AzureDeployment
+  - template: Templates/validate-resourcegroupdeployment.yml
+    parameters:
+      resourcegroup: App
+      path: Backend/Service/.AzureDeployment
+      template: azuredeploy.bicep
+      templateParameters: azuredeploy.parameters.json
+      serviceConnection: Service-Connection

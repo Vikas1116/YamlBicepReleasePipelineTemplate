@@ -1,0 +1,38 @@
+parameters:
+  - name: serviceConnection
+    type: string
+  - name: subscriptionId
+    type: string
+
+jobs:
+  - deployment: DeployService
+    displayName: Deploy service
+    environment: Test
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - download: current
+              artifact: drop
+              patterns: '**/*'
+            - task: AzureResourceManagerTemplateDeployment@3
+              displayName: "ARM Template deployment: Service"
+              inputs:
+                azureResourceManagerConnection: ${{parameters.serviceConnection}}
+                subscriptionId: ${{parameters.subscriptionId}}
+                resourceGroupName: "App"
+                location: "West Europe"
+                csmFile: "$(Pipeline.Workspace)/drop/Templates/azuredeploy.bicep"
+                csmParametersFile: "$(Pipeline.Workspace)/drop/Templates/azuredeploy.parameters.json"
+                deploymentOutputs: serviceoutput
+
+            - task: AzureRmWebAppDeployment@4
+              displayName: 'Azure App Service Deploy: service'
+              inputs:
+                azureSubscription:  ${{parameters.serviceConnection}}
+                DeploymentType: zipDeploy
+                WebAppName: 'service-backend'
+                Package: '$(Pipeline.Workspace)/drop/Test.Api.zip'
+                enableCustomDeployment: true
+                RemoveAdditionalFilesFlag: true
+
